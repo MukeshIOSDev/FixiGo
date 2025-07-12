@@ -58,7 +58,7 @@ class AuthService: ObservableObject {
                 address: userData.address,
                 userType: userData.userType,
                 createdAt: Date(),
-                services: userData.services // Pass services from signup data
+                services: userData.services //   Pass services from signup data
             )
 
             try await saveUserToFirestore(user)
