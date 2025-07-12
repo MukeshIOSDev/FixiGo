@@ -13,6 +13,7 @@ import CoreText
 @main
 struct FixiGoApp: App {
     @StateObject private var authViewModel = AuthViewModel()
+//    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
     init() {
         // Configure Firebase

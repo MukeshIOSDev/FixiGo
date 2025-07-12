@@ -8,6 +8,7 @@ struct User: Identifiable, Codable {
     var address: String
     let userType: UserType
     let createdAt: Date
+    var services: [ServiceType]
 }
 
 struct UserSignupData {

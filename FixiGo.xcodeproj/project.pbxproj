@@ -59,9 +59,22 @@
 		283E84CD2E0DBA0C0016D5F9 /* FixiGoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FixiGoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		28D81C812E22C3FE000BE252 /* Exceptions for "FixiGo" folder in "FixiGo" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 283E84B52E0DBA0A0016D5F9 /* FixiGo */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		283E84B82E0DBA0A0016D5F9 /* FixiGo */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				28D81C812E22C3FE000BE252 /* Exceptions for "FixiGo" folder in "FixiGo" target */,
+			);
 			path = FixiGo;
 			sourceTree = "<group>";
 		};
@@ -487,6 +500,7 @@
 				DEVELOPMENT_TEAM = 2398ZNN8KJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FixiGo/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -515,6 +529,7 @@
 				DEVELOPMENT_TEAM = 2398ZNN8KJ;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FixiGo/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

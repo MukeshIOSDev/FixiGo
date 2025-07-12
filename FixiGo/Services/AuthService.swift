@@ -13,20 +13,27 @@ class AuthService: ObservableObject {
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
     private var cancellables = Set<AnyCancellable>()
+    private var authStateListenerHandle: AuthStateDidChangeListenerHandle?
     
     init() {
         setupAuthStateListener()
     }
-    
+    deinit {
+        if let handle = authStateListenerHandle {
+            auth.removeStateDidChangeListener(handle)
+        }
+    }
     // MARK: - Authentication State Management
     private func setupAuthStateListener() {
-        auth.addStateDidChangeListener { [weak self] _, user in
-            DispatchQueue.main.async {
-                if let firebaseUser = user {
-                    self?.fetchUserData(userId: firebaseUser.uid)
-                } else {
-                    self?.currentUser = nil
-                    self?.isAuthenticated = false
+        authStateListenerHandle = auth.addStateDidChangeListener { [weak self] _, user in
+            guard let self = self else { return }
+
+            if let user = user {
+                self.fetchUserData(userId: user.uid)
+            } else {
+                DispatchQueue.main.async {
+                    self.currentUser = nil
+                    self.isAuthenticated = false
                 }
             }
         }
@@ -50,7 +57,8 @@ class AuthService: ObservableObject {
                 phone: userData.phone,
                 address: userData.address,
                 userType: userData.userType,
-                createdAt: Date()
+                createdAt: Date(),
+                services: userData.services // Pass services from signup data
             )
 
             try await saveUserToFirestore(user)
@@ -83,7 +91,17 @@ class AuthService: ObservableObject {
             self.isAuthenticated = true
             self.isLoading = false
         } catch {
-            self.errorMessage = error.localizedDescription
+            let nsError = error as NSError
+            switch nsError.code {
+            case AuthErrorCode.wrongPassword.rawValue:
+                self.errorMessage = "Incorrect password. Please try again."
+            case AuthErrorCode.invalidEmail.rawValue:
+                self.errorMessage = "Invalid email address."
+            case AuthErrorCode.userNotFound.rawValue:
+                self.errorMessage = "No account found with this email."
+            default:
+                self.errorMessage = nsError.localizedDescription
+            }
             self.isLoading = false
             throw error
         }
@@ -101,20 +119,17 @@ class AuthService: ObservableObject {
     }
     
     // MARK: - Password Reset
+    @MainActor
     func resetPassword(email: String) async throws {
         isLoading = true
         errorMessage = nil
         
         do {
             try await auth.sendPasswordReset(withEmail: email)
-            DispatchQueue.main.async {
-                self.isLoading = false
-            }
+            isLoading = false
         } catch {
-            DispatchQueue.main.async {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
-            }
+            errorMessage = error.localizedDescription
+            isLoading = false
             throw error
         }
     }
@@ -128,21 +143,39 @@ class AuthService: ObservableObject {
                         let user = try document.data(as: User.self)
                         self?.currentUser = user
                         self?.isAuthenticated = true
-                        print("User data fetched, navigation should occur.")
                     } catch {
                         self?.errorMessage = "Failed to parse user data: \(error.localizedDescription)"
-                        print("Parse error: \(error)")
+                    }
+                } else if let firebaseUser = self?.auth.currentUser {
+                    // User document not found, create it from Firebase Auth user
+                    let user = User(
+                        id: firebaseUser.uid,
+                        name: firebaseUser.displayName ?? "",
+                        email: firebaseUser.email ?? "",
+                        phone: "",
+                        address: "",
+                        userType: .customer, // Default, or prompt for this
+                        createdAt: Date(),
+                        services: []
+                    )
+                    Task {
+                        do {
+                            try await self?.saveUserToFirestore(user)
+                            self?.currentUser = user
+                            self?.isAuthenticated = true
+                        } catch {
+                            self?.errorMessage = "Failed to create user profile: \(error.localizedDescription)"
+                        }
                     }
                 } else {
                     self?.errorMessage = "User document not found"
-                    print("User document not found for id: \(userId)")
                 }
             }
         }
     }
     
     private func saveUserToFirestore(_ user: User) async throws {
-        try await db.collection("users").document(user.id).setData(from: user)
+        try db.collection("users").document(user.id).setData(from: user)
     }
     
     func updateUserProfile(_ user: User) async throws {
@@ -151,14 +184,15 @@ class AuthService: ObservableObject {
         
         do {
             try await saveUserToFirestore(user)
-            DispatchQueue.main.async {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
                 self.currentUser = user
                 self.isLoading = false
             }
         } catch {
-            DispatchQueue.main.async {
-                self.errorMessage = error.localizedDescription
-                self.isLoading = false
+            DispatchQueue.main.async { [weak self] in
+                self?.errorMessage = error.localizedDescription
+                self?.isLoading = false
             }
             throw error
         }
@@ -201,4 +235,4 @@ enum AuthError: LocalizedError {
             return "An unknown error occurred"
         }
     }
-} 
+}

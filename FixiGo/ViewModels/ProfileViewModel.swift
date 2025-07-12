@@ -70,7 +70,7 @@ class ProfileViewModel: ObservableObject {
             phone: "+91 98765 43210",
             address: "Mumbai, Maharashtra",
             userType: .customer,
-            createdAt: Date()
+            createdAt: Date(), services: [.cleaner, .carpenter]
         )
     }
 } 

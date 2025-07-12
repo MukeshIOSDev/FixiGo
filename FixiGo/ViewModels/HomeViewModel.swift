@@ -186,7 +186,7 @@ class HomeViewModel: ObservableObject, Sendable {
             phone: "+1234567890",
             address: "123 Main St",
             userType: .customer,
-            createdAt: Date()
+            createdAt: Date(), services: [.cleaner, .carpenter]
         )
     }
     

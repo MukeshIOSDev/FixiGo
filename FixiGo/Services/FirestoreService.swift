@@ -134,7 +134,7 @@ class FirestoreService: ObservableObject, Sendable {
             phone: phone,
             address: data["address"] as? String ?? "",
             userType: userType,
-            createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+            createdAt: (data["createdAt"] as? Timestamp)?.dateValue() ?? Date(), services: [.cleaner, .carpenter]
         )
     }
     
