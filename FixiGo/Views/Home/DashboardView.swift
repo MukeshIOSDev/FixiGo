@@ -8,7 +8,7 @@ struct DashboardView: View {
     
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(spacing: theme.largeSpacing) {
+            VStack(spacing: theme.spacing) {
                 headerSection
                 statsSection
                 if let user = authViewModel.currentUser {
@@ -31,8 +31,8 @@ struct DashboardView: View {
                     LoadingView()
                 }
             }
-            .padding(.horizontal, theme.largeSpacing)
-            .padding(.top, theme.largeSpacing)
+            .padding(.horizontal, 4)
+            .padding(.top, 0)
             .padding(.bottom, 90) // Add bottom padding for tab bar
             .background(theme.backgroundGradient.ignoresSafeArea())
         }
@@ -52,24 +52,77 @@ struct DashboardView: View {
     
     // MARK: - Header
     private var headerSection: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Dashboard")
-                    .font(theme.titleFont)
-                    .foregroundColor(theme.primaryColor)
-                if let user = authViewModel.currentUser {
-                    Text("Welcome, \(user.name)")
-                        .font(theme.subtitleFont)
+        ZStack(alignment: .bottom) {
+            // Top header bar with color/gradient and rounded bottom corners
+            HStack(alignment: .center) {
+                // Profile Avatar
+                Button(action: { /* Navigate to profile */ }) {
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 44, height: 44)
+                        .foregroundColor(.white)
+                        .background(Circle().fill(theme.primaryColor))
+                }
+                .buttonStyle(PlainButtonStyle())
+                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
+                .padding(.trailing, 8)
+
+                Spacer()
+                // App Name
+                Text("FixiGo")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .shadow(color: .black.opacity(0.10), radius: 2, x: 0, y: 1)
+                Spacer()
+                // Notification Bell with Badge
+                Button(action: { /* Navigate to notifications */ }) {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "bell")
+                            .font(.system(size: 28, weight: .regular))
+                            .foregroundColor(.white)
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 12, height: 12)
+                            .overlay(
+                                Text("2") // Replace with dynamic count
+                                    .font(.caption2)
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 1, y: -6)
+                    }
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, 8)
+            .padding(.bottom, 32)
+            .frame(maxWidth: .infinity)
+            .background(
+                LinearGradient(gradient: Gradient(colors: [theme.primaryColor, theme.secondaryColor]), startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .clipShape(RoundedCorner(radius: 32, corners: [.bottomLeft, .bottomRight]))
+            )
+            // Overlapping search bar
+            VStack {
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(theme.placeholderColor)
+                    TextField("Search services, workers...", text: .constant(""))
+                        .font(theme.bodyFont)
                         .foregroundColor(theme.textColor)
                 }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 18)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.largeCornerRadius)
+                        .fill(Color.white)
+                        .shadow(color: theme.primaryColor.opacity(0.10), radius: 6, x: 0, y: 2)
+                )
             }
-            Spacer()
-            Image(systemName: "sparkles")
-                .font(.system(size: 32))
-                .foregroundColor(theme.accentColor)
-                .rotationEffect(.degrees(10))
-                .shadow(color: theme.accentColor.opacity(0.3), radius: 8, x: 0, y: 4)
+            .padding(.horizontal, 20)
+            .offset(y: 32)
         }
+        .padding(.bottom, 40)
     }
     
     // MARK: - Book Now Button

@@ -1,19 +1,6 @@
-# 📱 Fixigo – Product Requirements Document
-
-## 🚀 Overview
-**Fixigo** is a hyperlocal service marketplace app that connects users with nearby skilled workers such as mistris, plumbers, electricians, carpenters, and labourers. The goal is to make it quick and easy for users to book trusted professionals with real-time availability, in-app communication, and payment support.
-
 ---
-
-## 🧩 Objective
-Create an intuitive iOS app that:
-- Lists nearby available workers based on service type
-- Allows customers to book instantly or schedule jobs
-- Offers real-time communication and payment integration
-- Supports worker registration and profile management
-
+alwaysApply: false
 ---
-
 ## 👤 User Roles
 - **Customer**: Can search, book, and review workers
 - **Worker**: Can register, accept jobs, and manage bookings
