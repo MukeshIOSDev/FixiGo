@@ -5,12 +5,93 @@ struct DashboardView: View {
     private let theme = Theme()
     @Namespace private var animation
     @State private var showBookNowSheet = false
+    @State private var selectedStatsPeriod: StatsPeriod = .today
+    @State private var showStatDetail: Bool = false
+    @State private var selectedStat: StatType? = nil
+    
+    enum StatsPeriod: String, CaseIterable, Identifiable {
+        case today = "Today"
+        case week = "This Week"
+        case month = "This Month"
+        var id: String { self.rawValue }
+    }
+    
+    enum StatType: String, Identifiable {
+        case bookings = "Bookings"
+        case completed = "Completed"
+        case pending = "Pending"
+        var id: String { self.rawValue }
+    }
+    
+    // Computed stats for each period
+    private var bookingsStat: (value: Int, progress: Double) {
+        switch selectedStatsPeriod {
+        case .today: return (5, 0.5)
+        case .week: return (28, 0.7)
+        case .month: return (110, 0.9)
+        }
+    }
+    private var completedStat: (value: Int, progress: Double) {
+        switch selectedStatsPeriod {
+        case .today: return (3, 0.3)
+        case .week: return (20, 0.5)
+        case .month: return (80, 0.7)
+        }
+    }
+    private var pendingStat: (value: Int, progress: Double) {
+        switch selectedStatsPeriod {
+        case .today: return (2, 0.2)
+        case .week: return (8, 0.2)
+        case .month: return (30, 0.3)
+        }
+    }
+    
+    // Mock data for histories
+    private let bookingHistory: [BookingHistoryItem] = [
+        .init(id: 1, worker: "Rajesh Kumar", date: "10 July", status: "Completed"),
+        .init(id: 2, worker: "Amit Singh", date: "9 July", status: "Pending"),
+        .init(id: 3, worker: "Priya Sharma", date: "8 July", status: "Cancelled")
+    ]
+    private let paymentHistory: [PaymentHistoryItem] = [
+        .init(id: 1, amount: 500, date: "10 July", method: "UPI"),
+        .init(id: 2, amount: 300, date: "8 July", method: "Card"),
+        .init(id: 3, amount: 700, date: "5 July", method: "UPI")
+    ]
+    private let reviewHistory: [ReviewHistoryItem] = [
+        .init(id: 1, rating: 5, text: "Great service!", date: "10 July"),
+        .init(id: 2, rating: 4, text: "Good, but a bit late.", date: "8 July"),
+        .init(id: 3, rating: 3, text: "Average experience.", date: "5 July")
+    ]
+    
+    struct BookingHistoryItem: Identifiable { let id: Int; let worker: String; let date: String; let status: String }
+    struct PaymentHistoryItem: Identifiable { let id: Int; let amount: Int; let date: String; let method: String }
+    struct ReviewHistoryItem: Identifiable { let id: Int; let rating: Int; let text: String; let date: String }
     
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: theme.spacing) {
                 headerSection
+                // Period Picker and Label
+                VStack(spacing: 4) {
+                    Picker("Stats Period", selection: $selectedStatsPeriod) {
+                        ForEach(StatsPeriod.allCases) { period in
+                            Text(period.rawValue).tag(period)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal, 8)
+                    Text("Showing \(selectedStatsPeriod.rawValue)\'s Stats")
+                        .font(.caption)
+                        .foregroundColor(theme.placeholderColor)
+                        .padding(.bottom, 2)
+                }
                 statsSection
+                // Booking History Section
+                historySection(title: "Booking History", items: bookingHistory.map { AnyView(BookingHistoryCard(item: $0)) }, onMore: { /* Future: Navigate to full booking history */ })
+                // Payment History Section
+                historySection(title: "Payment History", items: paymentHistory.map { AnyView(PaymentHistoryCard(item: $0)) }, onMore: { /* Future: Navigate to full payment history */ })
+                // Review History Section
+                //historySection(title: "Review History", items: reviewHistory.map { AnyView(ReviewHistoryCard(item: $0)) })
                 if let user = authViewModel.currentUser {
                     if user.userType == .customer {
                         featuredWorkersSection
@@ -128,57 +209,33 @@ struct DashboardView: View {
     // MARK: - Book Now Button
     private var bookNowButton: some View {
         Button(action: { showBookNowSheet = true }) {
-            HStack {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.white)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(theme.primaryGradient)
-            .cornerRadius(theme.largeCornerRadius)
-            .shadow(color: theme.primaryColor.opacity(0.18), radius: 10, x: 0, y: 6)
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.white)
+                .padding(18)
+                .background(theme.primaryGradient)
+                .clipShape(Circle())
+                .shadow(color: theme.primaryColor.opacity(0.18), radius: 10, x: 0, y: 6)
         }
-        .padding(.vertical, 4)
-        .padding(.bottom, 2)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 24)
         .animation(.spring(), value: showBookNowSheet)
     }
     
     // MARK: - Stats Section
     private var statsSection: some View {
         HStack(spacing: theme.spacing) {
-            statCard(title: "Bookings", value: "12", icon: "calendar", color: theme.primaryColor)
-            statCard(title: "Completed", value: "8", icon: "checkmark.seal.fill", color: theme.successColor)
-            statCard(title: "Pending", value: "4", icon: "clock.fill", color: theme.accentColor)
+            StatCardButton(title: "Bookings", value: bookingsStat.value, icon: "calendar", color: theme.primaryColor, progress: bookingsStat.progress, statType: .bookings, showStatDetail: $showStatDetail, selectedStat: $selectedStat)
+            StatCardButton(title: "Completed", value: completedStat.value, icon: "checkmark.seal.fill", color: Color.green, progress: completedStat.progress, statType: .completed, showStatDetail: $showStatDetail, selectedStat: $selectedStat)
+            StatCardButton(title: "Pending", value: pendingStat.value, icon: "clock.fill", color: theme.accentColor, progress: pendingStat.progress, statType: .pending, showStatDetail: $showStatDetail, selectedStat: $selectedStat)
         }
         .frame(maxWidth: .infinity)
-    }
-    
-    private func statCard(title: String, value: String, icon: String, color: Color) -> some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(color.opacity(0.18))
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(color)
+        .padding(.vertical, 8)
+        .sheet(isPresented: $showStatDetail) {
+            if let stat = selectedStat {
+                StatDetailSheet(statType: stat, period: selectedStatsPeriod)
             }
-            Text(value)
-                .font(.poppins(size: 22, weight: .bold))
-                .foregroundColor(theme.textColor)
-            Text(title)
-                .font(theme.captionFont)
-                .foregroundColor(theme.placeholderColor)
         }
-        .padding(.vertical, theme.spacing)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: theme.cornerRadius)
-                .fill(LinearGradient(gradient: Gradient(colors: [color.opacity(0.08), .white]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                .shadow(color: color.opacity(0.10), radius: 8, x: 0, y: 4)
-        )
-        .animation(.spring(), value: value)
     }
     
     // MARK: - Featured Workers/Customers
@@ -434,6 +491,258 @@ struct DashboardView: View {
         .cornerRadius(theme.cornerRadius)
         .shadow(color: color.opacity(0.10), radius: 8, x: 0, y: 4)
         .animation(.easeInOut, value: title)
+    }
+
+// Generic horizontal scrollable history section
+private func historySection(title: String, items: [AnyView], onMore: (() -> Void)? = nil) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+        HStack {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(theme.primaryColor)
+            Spacer()
+            if let onMore = onMore {
+                Button(action: onMore) {
+                    HStack(spacing: 4) {
+                        Text("More")
+                            .font(.subheadline)
+                            .foregroundColor(theme.accentColor)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(theme.accentColor)
+                    }
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(theme.accentColor.opacity(0.08)))
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+        }
+        .padding(.horizontal, 4)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(Array(items.enumerated()), id: \ .0) { idx, view in
+                    view
+                }
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 2)
+        }
+    }
+    .padding(.top, 8)
+}
+
+// Improved Booking History Card
+struct BookingHistoryCard: View {
+    let item: DashboardView.BookingHistoryItem
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(item.status == "Completed" ? Color.green.opacity(0.15) : (item.status == "Pending" ? Color.orange.opacity(0.15) : Color.red.opacity(0.15)))
+                    .frame(width: 38, height: 38)
+                Image(systemName: item.status == "Completed" ? "checkmark.seal.fill" : (item.status == "Pending" ? "clock.fill" : "xmark.octagon.fill"))
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(item.status == "Completed" ? .green : (item.status == "Pending" ? .orange : .red))
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.worker)
+                    .font(.subheadline).bold()
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(item.date)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(item.status)
+                    .font(.caption2)
+                    .foregroundColor(item.status == "Completed" ? .green : (item.status == "Pending" ? .orange : .red))
+                    .padding(.top, 2)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+        )
+        .frame(width: 180, alignment: .leading)
+        .onTapGesture { /* Future: Navigate to booking detail */ }
+    }
+}
+// Improved Payment History Card
+struct PaymentHistoryCard: View {
+    let item: DashboardView.PaymentHistoryItem
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.15))
+                    .frame(width: 38, height: 38)
+                Image(systemName: item.method == "UPI" ? "indianrupeesign.circle.fill" : "creditcard.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(item.method == "UPI" ? .blue : .purple)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("₹\(item.amount)")
+                    .font(.subheadline).bold()
+                Text(item.method)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(item.date)
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white)
+                .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
+        )
+        .frame(width: 160)
+        .onTapGesture { /* Future: Navigate to payment detail */ }
+    }
+}
+// Review History Card
+struct ReviewHistoryCard: View {
+    let item: DashboardView.ReviewHistoryItem
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 2) {
+                ForEach(0..<item.rating, id: \.self) { _ in
+                    Image(systemName: "star.fill").font(.caption2).foregroundColor(.yellow)
+                }
+            }
+            Text(item.text)
+                .font(.caption)
+                .lineLimit(2)
+            Text(item.date)
+                .font(.caption2)
+                .foregroundColor(.gray)
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.white).shadow(color: .black.opacity(0.06), radius: 4, x: 0, y: 2))
+        .frame(width: 160)
+        .onTapGesture { /* Future: Navigate to review detail */ }
+    }
+}
+}
+
+// AnimatedStatCard View (move outside DashboardView)
+struct AnimatedStatCard: View {
+    let title: String
+    let value: Int
+    let icon: String
+    let color: Color
+    let progress: Double // 0.0 to 1.0
+    @State private var animatedValue: Double = 0
+    @State private var animatedProgress: Double = 0
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .stroke(color.opacity(0.12), lineWidth: 7)
+                    .frame(width: 54, height: 54)
+                Circle()
+                    .trim(from: 0, to: animatedProgress)
+                    .stroke(color, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 54, height: 54)
+                    .shadow(color: color.opacity(0.18), radius: 4, x: 0, y: 2)
+                Image(systemName: icon)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(color)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color.white.opacity(0.7))
+                    .blur(radius: 0.5)
+            )
+            .padding(.bottom, 2)
+            Text("\(Int(animatedValue))")
+                .font(.poppins(size: 22, weight: .bold))
+                .foregroundColor(.primary)
+                .animation(nil, value: animatedValue)
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color.white.opacity(0.5))
+                .shadow(color: color.opacity(0.10), radius: 8, x: 0, y: 4)
+        )
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.0)) {
+                animatedValue = Double(value)
+                animatedProgress = progress
+            }
+        }
+    }
+}
+
+// StatCardButton wraps AnimatedStatCard and handles tap
+struct StatCardButton: View {
+    let title: String
+    let value: Int
+    let icon: String
+    let color: Color
+    let progress: Double
+    let statType: DashboardView.StatType
+    @Binding var showStatDetail: Bool
+    @Binding var selectedStat: DashboardView.StatType?
+    @State private var isPressed = false
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        Button(action: {
+            selectedStat = statType
+            showStatDetail = true
+        }) {
+            AnimatedStatCard(title: title, value: value, icon: icon, color: color, progress: progress)
+                .scaleEffect(isPressed ? 0.96 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isPressed)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .simultaneousGesture(DragGesture(minimumDistance: 0)
+            .onChanged { _ in isPressed = true }
+            .onEnded { _ in isPressed = false })
+    }
+}
+
+// StatDetailSheet for showing detailed data
+struct StatDetailSheet: View {
+    let statType: DashboardView.StatType
+    let period: DashboardView.StatsPeriod
+    var body: some View {
+        VStack(spacing: 20) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.2))
+                .frame(width: 40, height: 6)
+                .padding(.top, 8)
+            Text("\(statType.rawValue) Details")
+                .font(.title2).bold()
+            Text("Period: \(period.rawValue)")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Divider()
+            // Placeholder for detailed data (list, chart, etc.)
+            VStack(spacing: 12) {
+                Image(systemName: "chart.bar.xaxis")
+                    .font(.system(size: 40))
+                    .foregroundColor(.accentColor)
+                Text("Detailed data for \(statType.rawValue) in \(period.rawValue) will appear here.")
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+        }
+        .padding()
     }
 }
 
